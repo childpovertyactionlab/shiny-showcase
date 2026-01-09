@@ -21,9 +21,6 @@ library(sf)
 library(thematic)
 library(cpaltemplates)  # CPAL branding, themes, and templates
 
-# Source debug theme for troubleshooting thematic integration
-source("R/theme_cpal_debug.R")
-
 # Set environment variables (CPAL public demo token - replace with your own for production)
 Sys.setenv(MAPBOX_PUBLIC_TOKEN = "pk.eyJ1IjoiY3BhbGFuYWx5dGljcyIsImEiOiJjbHg5ODAwMGUxaTRtMmpwdGNscms3ZnJmIn0.D6yaemYNkijMo1naveeLbw")
 
