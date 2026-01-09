@@ -1,0 +1,998 @@
+---
+title: "Getting Started"
+subtitle: "Complete guide to building CPAL Shiny dashboards"
+---
+
+A comprehensive guide to using CPAL-themed components in your Shiny applications. This documentation covers setup, theming, and implementation of various UI components using the `cpaltemplates` package.
+
+## Prerequisites
+
+### Required Packages
+
+```{r}
+# Install cpaltemplates from GitHub
+remotes::install_github("childpovertyactionlab/cpaltemplates")
+
+# Core packages
+install.packages(c(
+  "shiny",
+  "shinyjs",
+  "bslib",
+  "bsicons",
+  "ggplot2",
+  "dplyr",
+  "thematic",
+  "gt",
+  "reactable",
+  "DT",
+  "shinyWidgets"
+))
+```
+
+### Minimum Package Versions
+
+- R >= 4.1.0
+- shiny >= 1.7.0
+- bslib >= 0.5.0
+- cpaltemplates >= 2.6.0
+
+## Project Setup
+
+### Recommended Project Structure
+
+```
+your-shiny-app/
+├── app.R                 # Main application file
+├── _brand.yml            # CPAL brand configuration (from cpaltemplates)
+├── .env                  # Environment variables for tokens/secrets (DO NOT COMMIT)
+├── .gitignore            # Should include .env, .Renviron
+├── R/
+│   ├── helpers.R         # Custom helper functions
+│   └── loading-spinner.R # Loading overlay component (from templates/)
+├── data/                 # Optional: only needed for local data files
+│   └── your_data.rds     # (Not needed if connecting to database)
+├── www/
+│   └── images/
+│       └── CPAL_Logo_OneColor.png
+└── views/                # Optional: modular UI files (see below)
+    ├── header-ui.R
+    └── sidebar-ui.R
+```
+
+### Quick Start with Templates
+
+This repository includes ready-to-use template files in the `templates/` folder:
+
+| Template File | Copy To | Purpose |
+|---------------|---------|---------|
+| `templates/app-template.R` | `app.R` | Complete starter app |
+| `templates/header-template.R` | `views/header-ui.R` | Header with logo & dark mode |
+| `templates/loading-spinner-template.R` | `R/loading-spinner.R` | Loading overlay functions |
+
+### Getting the Brand File
+
+The `_brand.yml` file can be automatically added to your project using cpaltemplates:
+
+```{r}
+library(cpaltemplates)
+
+# This copies _brand.yml to your project root
+use_cpal_brand()
+```
+
+Alternatively, copy it manually from the `shiny-showcase` repository.
+
+### Data Folder
+
+The `data/` folder is **optional** and only needed if you're loading data from local files:
+
+```{r}
+# Local file approach
+your_data <- readRDS("data/your_data.rds")
+```
+
+**If connecting to a database** (e.g., Databricks, PostgreSQL), you don't need a data folder:
+
+```{r}
+# Database connection approach
+library(DBI)
+library(odbc)
+
+con <- dbConnect(
+  odbc::odbc(),
+  dsn = "your_databricks_dsn"
+  # Or use connection string from environment variable
+)
+
+your_data <- dbGetQuery(con, "SELECT * FROM your_schema.your_table")
+```
+
+### Environment Variables & Secrets
+
+**Never hardcode API tokens, database credentials, or secrets in your code.**
+
+Create a `.env` file in your project root for sensitive values:
+
+```bash
+# .env file (DO NOT COMMIT TO GIT)
+MAPBOX_TOKEN=pk.eyJ1IjoiY3BhbGFuYWx5dGljcyIsImEiOi...
+DATABASE_HOST=your-databricks-host.cloud.databricks.com
+DATABASE_TOKEN=your-secret-token
+```
+
+Load environment variables in your app:
+
+```{r}
+# At the top of app.R
+# Option 1: Using dotenv package
+library(dotenv)
+load_dot_env()
+
+# Option 2: Using .Renviron file (automatically loaded by R)
+# Create .Renviron file with same format as .env
+
+# Access variables
+Sys.getenv("MAPBOX_TOKEN")
+Sys.getenv("DATABASE_TOKEN")
+```
+
+**Important:** Add `.env` and `.Renviron` to your `.gitignore`:
+
+```
+# .gitignore
+.env
+.Renviron
+*.secrets
+```
+
+### When to Use the Views Folder
+
+The `views/` folder is for **modular UI components**. Use it based on your app's complexity:
+
+#### Simple Apps (No Views Needed)
+
+For small apps with minimal UI, keep everything in `app.R`:
+
+```{r}
+# app.R - Simple app (no views folder needed)
+ui <- page_sidebar(
+  title = "Simple Dashboard",
+  theme = cpal_dashboard_theme(),
+  sidebar = sidebar(
+    selectInput("filter", "Filter:", choices = c("A", "B"))
+  ),
+  plotOutput("my_plot")
+)
+```
+
+**Use this approach when:**
+
+- Your app has 1-2 pages/sections
+- The UI code is under ~200 lines
+- You're building a quick prototype
+- Only one person maintains the app
+
+#### Complex Apps (Use Views)
+
+For larger apps, split UI into separate files in `views/`:
+
+```
+views/
+├── header-ui.R           # Header with logo and dark mode toggle
+├── sidebar-ui.R          # Navigation sidebar
+├── dashboard-ui.R        # Main dashboard page
+├── analysis-ui.R         # Analysis/charts page
+├── data-tables-ui.R      # Tables page
+└── settings-ui.R         # Settings/config page
+```
+
+Each view file exports a UI element:
+
+```{r}
+# views/dashboard-ui.R
+dashboard_ui <- div(
+  h1("Dashboard"),
+  layout_columns(
+    col_widths = c(6, 6),
+    card(card_header("Chart 1"), plotOutput("chart1")),
+    card(card_header("Chart 2"), plotOutput("chart2"))
+  )
+)
+```
+
+Then source in `app.R`:
+
+```{r}
+# app.R - Complex app with views
+ui <- page_sidebar(
+  title = source("views/header-ui.R")$value,
+  theme = cpal_dashboard_theme(),
+  sidebar = source("views/sidebar-ui.R")$value,
+
+  # Conditional sections
+  conditionalPanel(
+    condition = "output.current_section == 'dashboard'",
+    source("views/dashboard-ui.R")$value
+  ),
+  conditionalPanel(
+    condition = "output.current_section == 'analysis'",
+    source("views/analysis-ui.R")$value
+  )
+)
+```
+
+**Use views when:**
+
+- Your app has 3+ pages/sections
+- The UI code exceeds ~200 lines
+- Multiple people work on the app
+- You want reusable components
+- You need clear separation of concerns
+
+## Brand Configuration
+
+The `_brand.yml` file is the foundation of CPAL theming. It defines colors, fonts, and Bootstrap defaults.
+
+### Key Color Definitions
+
+```yaml
+# Core brand colors (defined in _brand.yml)
+color:
+  palette:
+    midnight: "#004855"      # Darkest teal
+    deep_teal: "#006878"     # Primary brand color
+    coral: "#E86A50"         # Accent/warning color
+    sage: "#5A8A6F"          # Secondary green
+    slate: "#5C6B73"         # Neutral gray
+    warm_gray: "#9BA8AB"     # Light neutral
+    gold: "#B8860B"          # Highlight color
+    plum: "#8B5E83"          # Alternative accent
+```
+
+### Using Colors in Your Code
+
+```{r}
+library(cpaltemplates)
+
+# Get a specific color
+primary_color <- cpal_get_color("deep_teal")
+# Returns: "#006878"
+
+# Get the primary brand color
+cpal_get_primary_color()
+# Returns: "#006878"
+
+# Available color names:
+# midnight, deep_teal, coral, sage, slate, warm_gray, gold, plum,
+# teal, coral_dark, white, neutral, black
+```
+
+## App Theme Setup
+
+### Basic App Structure
+
+```{r}
+library(shiny)
+library(shinyjs)
+library(bslib)
+library(cpaltemplates)
+
+# Disable dev mode popups (recommended for production)
+options(shiny.devmode = FALSE)
+
+ui <- page_sidebar(
+  title = "Your App Title",
+  theme = cpal_dashboard_theme(),  # Apply CPAL theme
+  sidebar = sidebar(
+    # Your sidebar content
+  ),
+  useShinyjs(),  # Enable shinyjs
+  # Your main content
+)
+
+server <- function(input, output, session) {
+  # Enable thematic for auto-theming ggplot2
+  thematic::thematic_on()
+
+  # Your server logic
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+### Header with Logo and Dark Mode Toggle
+
+A reusable header template is available at `templates/header-template.R`. Copy it to `views/header-ui.R` and customize:
+
+```{r}
+# views/header-ui.R (copy from templates/header-template.R)
+header_ui <- div(
+  class = "d-flex align-items-center justify-content-between w-100",
+
+  # Left side: logo + title
+  div(
+    class = "d-flex align-items-center",
+    tags$img(
+      src = "images/CPAL_Logo_OneColor.png",  # Place logo in www/images/
+      height = "30",
+      class = "me-2"
+    ),
+    tags$div("Your Dashboard Title", class = "header-title")  # <- MODIFY THIS
+  ),
+
+  # Right side: dark mode toggle
+  # Options: "light" (default), "dark", or NULL (system preference)
+  input_dark_mode(id = "dark_mode_toggle", mode = "light")
+)
+```
+
+Use in your app:
+
+```{r}
+ui <- page_sidebar(
+  title = source("views/header-ui.R")$value,
+  theme = cpal_dashboard_theme(),
+  # ...
+)
+```
+
+::: {.callout-note}
+Make sure to place your logo file at `www/images/CPAL_Logo_OneColor.png` or update the path accordingly.
+:::
+
+## Dark/Light Mode Support
+
+### Enabling Thematic for ggplot2
+
+The `thematic` package automatically adjusts ggplot2 colors based on the app's theme (dark/light mode).
+
+```{r}
+server <- function(input, output, session) {
+  # IMPORTANT: Call this at the start of your server function
+  thematic::thematic_on()
+
+  # Your plots will now auto-adjust to dark/light mode
+  output$my_plot <- renderPlot({
+    ggplot(data, aes(x, y)) +
+      geom_point() +
+      theme_cpal_auto()  # Use this theme for auto dark/light support
+  })
+}
+```
+
+### Theme Functions
+
+| Function | Use Case |
+|----------|----------|
+| `theme_cpal()` | Standard CPAL theme (light mode only) |
+| `theme_cpal_auto()` | Auto-adjusts to dark/light mode (recommended) |
+| `theme_cpal_dark()` | Explicit dark mode theme |
+| `theme_cpal_minimal()` | Minimal styling variant |
+| `theme_cpal_print()` | Optimized for print output |
+
+### Example: Dark Mode Compatible Plot
+
+```{r}
+output$my_chart <- renderPlot({
+  ggplot(filtered_data(), aes(x = category, y = value, fill = group)) +
+    geom_col() +
+    scale_fill_cpal_d() +  # CPAL discrete color scale
+    labs(
+      title = "My Chart Title",
+      x = "Category",
+      y = "Value"
+    ) +
+    theme_cpal_auto()  # Auto dark/light mode support
+})
+```
+
+## Loading Spinner
+
+Show users feedback while the app initializes. A reusable template is available in `templates/loading-spinner-template.R`.
+
+### Quick Setup (Using Template)
+
+1. Copy `templates/loading-spinner-template.R` to `R/loading-spinner.R` in your project
+2. Source it and use the helper functions:
+
+```{r}
+# At the top of app.R
+source("R/loading-spinner.R")
+
+# In your UI
+ui <- page_sidebar(
+  # ... theme and sidebar ...
+  useShinyjs(),
+  loading_overlay_ui(message = "Loading application..."),  # Add this
+  # Your main content...
+)
+
+# In your server
+server <- function(input, output, session) {
+  thematic::thematic_on()
+  setup_loading_overlay(session)  # Add this at the start
+  # Rest of server logic...
+}
+```
+
+### Manual Setup (Without Template)
+
+If you prefer to implement directly without the template file:
+
+#### UI Setup
+
+Add this to your UI, right after `useShinyjs()`:
+
+```{r}
+ui <- page_sidebar(
+  # ... theme and sidebar ...
+  useShinyjs(),
+
+  # Loading overlay
+  div(
+    id = "loading_overlay",
+    style = "position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+             background: rgba(255,255,255,0.9); z-index: 9999;
+             display: flex; justify-content: center; align-items: center;
+             flex-direction: column;",
+    div(
+      class = "spinner-border text-primary",
+      role = "status",
+      style = "width: 3rem; height: 3rem;"
+    ),
+    p("Loading application...", class = "mt-3 text-muted")
+  ),
+
+  # Your main content
+  div(id = "main_content", ...)
+)
+```
+
+#### Server Setup
+
+Hide the spinner after initialization:
+
+```{r}
+server <- function(input, output, session) {
+  thematic::thematic_on()
+
+  # Hide loading overlay after initialization
+  session$onFlushed(function() {
+    # Optional: setup fonts (can be slow)
+    setup_cpal_google_fonts()
+
+    # Hide the spinner
+    shinyjs::hide("loading_overlay", anim = TRUE, animType = "fade")
+  }, once = TRUE)
+
+  # Rest of server logic...
+}
+```
+
+### Customizing the Spinner
+
+The template function accepts customization parameters:
+
+```{r}
+# Custom message and colors
+loading_overlay_ui(
+  message = "Connecting to database...",
+  spinner_color = "text-primary",      # Bootstrap color class
+  background = "rgba(255,255,255,0.95)" # Semi-transparent white
+)
+
+# Skip font setup for faster loading
+setup_loading_overlay(session, setup_fonts = FALSE)
+```
+
+## Static Charts (ggplot2)
+
+### Color Scales
+
+```{r}
+# Discrete (categorical) colors
+scale_color_cpal_d()  # For points, lines
+scale_fill_cpal_d()   # For bars, areas
+
+# Continuous colors
+scale_color_cpal_c()  # For continuous color gradients
+scale_fill_cpal_c()   # For continuous fill gradients
+
+# Manual color selection
+scale_fill_manual(values = c(
+  cpal_get_color("deep_teal"),
+  cpal_get_color("coral"),
+  cpal_get_color("sage")
+))
+```
+
+### Scatter Plot Example
+
+```{r}
+output$scatter_plot <- renderPlot({
+  ggplot(data, aes(x = income, y = poverty_rate, color = category)) +
+    geom_point(size = 3, alpha = 0.8) +
+    geom_smooth(method = "lm", se = TRUE) +
+    scale_color_cpal_d() +
+    scale_x_continuous(labels = scales::dollar_format()) +
+    labs(
+      title = "Income vs Poverty Rate",
+      subtitle = "By County Category",
+      x = "Median Household Income",
+      y = "Poverty Rate (%)",
+      color = "Category"
+    ) +
+    theme_cpal_auto()
+})
+```
+
+### Bar Chart Example
+
+```{r}
+output$bar_chart <- renderPlot({
+  ggplot(summary_data, aes(x = category, y = count, fill = category)) +
+    geom_col(alpha = 0.9) +
+    geom_text(aes(label = count), vjust = -0.5, fontface = "bold") +
+    scale_fill_cpal_d() +
+    labs(
+      title = "Distribution by Category",
+      x = "Category",
+      y = "Count"
+    ) +
+    theme_cpal_auto() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "none"
+    )
+})
+```
+
+### Heatmap with Diverging Colors
+
+```{r}
+output$heatmap <- renderPlot({
+  ggplot(cor_data, aes(x = var1, y = var2, fill = correlation)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = round(correlation, 2)), fontface = "bold") +
+    scale_fill_gradient2(
+      low = cpal_get_color("coral"),      # Negative values
+      mid = "white",                       # Zero/neutral
+      high = cpal_get_color("deep_teal"), # Positive values
+      midpoint = 0,
+      limits = c(-1, 1)
+    ) +
+    labs(title = "Correlation Matrix") +
+    theme_cpal_auto() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+})
+```
+
+## Input Components
+
+### Standard Shiny Inputs with CPAL Theming
+
+The `cpal_dashboard_theme()` automatically styles standard Shiny inputs. No additional code needed.
+
+```{r}
+# These are automatically styled by _brand.yml
+textInput("name", "Your Name:")
+numericInput("age", "Age:", value = 25, min = 0, max = 120)
+selectInput("state", "State:", choices = c("Texas", "Oklahoma", "Louisiana"))
+sliderInput("range", "Range:", min = 0, max = 100, value = c(25, 75))
+dateRangeInput("dates", "Date Range:")
+checkboxInput("agree", "I agree to terms")
+radioButtons("choice", "Select one:", choices = c("A", "B", "C"))
+```
+
+### shinyWidgets Enhanced Inputs
+
+```{r}
+library(shinyWidgets)
+
+# Pretty checkboxes with CPAL colors
+prettyCheckboxGroup(
+  "options",
+  "Select Options:",
+  choices = c("Option A", "Option B", "Option C"),
+  status = "primary",
+  shape = "curve"
+)
+
+# Picker input with search
+pickerInput(
+  "multi_select",
+  "Choose Items:",
+  choices = list(
+    "Group 1" = c("Item A", "Item B"),
+    "Group 2" = c("Item C", "Item D")
+  ),
+  multiple = TRUE,
+  options = list(`actions-box` = TRUE)
+)
+
+# Air datepicker
+airDatepickerInput(
+  "date",
+  "Select Date:",
+  multiple = FALSE,
+  clearButton = TRUE
+)
+
+# Progress bars
+progressBar(
+  id = "progress1",
+  value = 75,
+  status = "primary",
+  display_pct = TRUE
+)
+```
+
+## Buttons and Actions
+
+### Primary Actions
+
+```{r}
+# Primary button (uses CPAL deep_teal)
+actionButton("submit", "Submit", class = "btn-primary")
+
+# Secondary/outline button
+actionButton("cancel", "Cancel", class = "btn-outline-secondary")
+
+# Danger button
+actionButton("delete", "Delete", class = "btn-danger")
+
+# Button with icon
+actionButton(
+  "refresh",
+  tagList(bsicons::bs_icon("arrow-clockwise"), "Refresh"),
+  class = "btn-primary"
+)
+```
+
+### Download Button
+
+```{r}
+# UI
+downloadButton("download_data", "Download CSV", class = "btn-primary")
+
+# Server
+output$download_data <- downloadHandler(
+  filename = function() {
+    paste("data_", Sys.Date(), ".csv", sep = "")
+  },
+  content = function(file) {
+    write.csv(filtered_data(), file, row.names = FALSE)
+  }
+)
+```
+
+### Button Groups
+
+```{r}
+div(
+  class = "btn-group",
+  role = "group",
+  actionButton("btn1", "Option 1", class = "btn-outline-primary"),
+  actionButton("btn2", "Option 2", class = "btn-outline-primary"),
+  actionButton("btn3", "Option 3", class = "btn-outline-primary")
+)
+```
+
+## Typography
+
+### Headings
+
+```{r}
+div(
+  h1("Main Page Title"),
+  h2("Section Heading"),
+  h3("Subsection"),
+  p("Body text paragraph.", class = "lead"),  # Larger intro text
+  p("Regular paragraph text."),
+  p("Small helper text.", class = "small text-muted")
+)
+```
+
+### Text Utilities
+
+```{r}
+# Colored text using Bootstrap classes
+p("Primary colored text", class = "text-primary")
+p("Muted/secondary text", class = "text-muted")
+p("Success text", class = "text-success")
+p("Warning text", class = "text-warning")
+p("Danger text", class = "text-danger")
+
+# Font weights
+tags$strong("Bold text")
+tags$em("Italic text")
+tags$code("Code snippet")
+
+# Custom CPAL colored text
+p(style = paste0("color: ", cpal_get_color("coral")), "Coral colored text")
+```
+
+### Cards with Headers
+
+```{r}
+card(
+  card_header(
+    class = "bg-primary text-white",
+    "Card Title"
+  ),
+  card_body(
+    p("Card content goes here."),
+    actionButton("card_action", "Take Action", class = "btn-primary")
+  )
+)
+```
+
+## Data Tables
+
+### GT Tables (Static/Print-Ready)
+
+```{r}
+library(gt)
+
+output$gt_table <- render_gt({
+  data %>%
+    select(name, value, category) %>%
+    head(10) %>%
+    cpal_table_gt(
+      title = "Summary Table",
+      subtitle = "Top 10 Records"
+    ) %>%
+    fmt_number(columns = value, decimals = 1) %>%
+    cols_label(
+      name = "Name",
+      value = "Value",
+      category = "Category"
+    )
+})
+```
+
+### GT Tables (Interactive with Pagination)
+
+```{r}
+output$gt_interactive <- render_gt({
+  data %>%
+    cpal_table_gt(
+      title = "Interactive Table",
+      subtitle = "With search and pagination"
+    ) %>%
+    opt_interactive(
+      use_pagination = TRUE,
+      use_page_size_select = TRUE,
+      page_size_default = 10,
+      use_search = TRUE
+    ) %>%
+    opt_row_striping()
+})
+```
+
+### Reactable Tables
+
+```{r}
+library(reactable)
+
+output$reactable_table <- renderReactable({
+  data %>%
+    cpal_table_reactable(
+      searchable = TRUE,
+      pagination = TRUE,
+      filterable = TRUE,
+      striped = TRUE,
+      highlight = TRUE,
+      columns = list(
+        name = colDef(name = "Name", sticky = "left"),
+        value = colDef(
+          name = "Value",
+          format = colFormat(digits = 1)
+        ),
+        income = colDef(
+          name = "Income",
+          format = colFormat(prefix = "$", separators = TRUE)
+        )
+      )
+    )
+})
+```
+
+### DT DataTables
+
+```{r}
+library(DT)
+
+output$dt_table <- DT::renderDataTable({
+  DT::datatable(
+    data,
+    options = list(
+      pageLength = 15,
+      scrollX = TRUE,
+      search = list(regex = TRUE)
+    ),
+    filter = "top",
+    rownames = FALSE
+  ) %>%
+    DT::formatRound(columns = "value", digits = 1) %>%
+    DT::formatCurrency(columns = "income", digits = 0)
+})
+```
+
+## Interactive Charts & Maps (TBD)
+
+::: {.callout-warning}
+This section is under development and will cover:
+
+- **Highcharter** - Interactive JavaScript charts
+- **Mapbox/mapgl** - Interactive choropleth maps
+
+Check back for updates or refer to the `shiny-showcase` app for current implementations.
+:::
+
+## Complete Example App
+
+A complete starter template is available at `templates/app-template.R`. Copy it to start a new project quickly.
+
+Here's a minimal but complete example incorporating the key CPAL components:
+
+```{r}
+# app.R - Minimal CPAL Shiny App Example
+
+library(shiny)
+library(shinyjs)
+library(bslib)
+library(ggplot2)
+library(dplyr)
+library(thematic)
+library(cpaltemplates)
+
+# Suppress dev mode popups
+options(shiny.devmode = FALSE)
+
+# Sample data
+sample_data <- data.frame(
+  category = rep(c("A", "B", "C", "D"), each = 25),
+  value = c(rnorm(25, 10, 2), rnorm(25, 15, 3),
+            rnorm(25, 12, 2.5), rnorm(25, 18, 4)),
+  group = sample(c("Group 1", "Group 2"), 100, replace = TRUE)
+)
+
+# UI
+ui <- page_sidebar(
+  title = div(
+    class = "d-flex align-items-center justify-content-between w-100",
+    div("CPAL Dashboard Example"),
+    input_dark_mode(id = "dark_mode", mode = "light")
+  ),
+  theme = cpal_dashboard_theme(),
+
+  sidebar = sidebar(
+    title = "Filters",
+    selectInput("category", "Category:",
+                choices = c("All", "A", "B", "C", "D")),
+    sliderInput("range", "Value Range:",
+                min = 0, max = 30, value = c(5, 25)),
+    actionButton("reset", "Reset Filters", class = "btn-outline-secondary")
+  ),
+
+  useShinyjs(),
+
+  # Loading spinner
+  div(
+    id = "loading_overlay",
+    style = "position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+             background: rgba(255,255,255,0.9); z-index: 9999;
+             display: flex; justify-content: center; align-items: center;",
+    div(class = "spinner-border text-primary", role = "status")
+  ),
+
+  # Main content
+  layout_columns(
+    col_widths = c(6, 6),
+    card(
+      card_header("Distribution by Category"),
+      plotOutput("bar_chart", height = "300px")
+    ),
+    card(
+      card_header("Value Distribution"),
+      plotOutput("box_plot", height = "300px")
+    )
+  )
+)
+
+# Server
+server <- function(input, output, session) {
+  thematic::thematic_on()
+
+  # Hide spinner on load
+  session$onFlushed(function() {
+    setup_cpal_google_fonts()
+    shinyjs::hide("loading_overlay", anim = TRUE, animType = "fade")
+  }, once = TRUE)
+
+  # Filtered data
+  filtered_data <- reactive({
+    data <- sample_data %>%
+      filter(value >= input$range[1], value <= input$range[2])
+
+    if (input$category != "All") {
+      data <- data %>% filter(category == input$category)
+    }
+    data
+  })
+
+  # Bar chart
+  output$bar_chart <- renderPlot({
+    filtered_data() %>%
+      count(category) %>%
+      ggplot(aes(x = category, y = n, fill = category)) +
+      geom_col() +
+      scale_fill_cpal_d() +
+      labs(title = "Count by Category", x = NULL, y = "Count") +
+      theme_cpal_auto() +
+      theme(legend.position = "none")
+  })
+
+  # Box plot
+  output$box_plot <- renderPlot({
+    ggplot(filtered_data(), aes(x = group, y = value, fill = group)) +
+      geom_boxplot(alpha = 0.8) +
+      scale_fill_cpal_d() +
+      labs(title = "Value by Group", x = NULL, y = "Value") +
+      theme_cpal_auto() +
+      theme(legend.position = "none")
+  })
+
+  # Reset button
+  observeEvent(input$reset, {
+    updateSelectInput(session, "category", selected = "All")
+    updateSliderInput(session, "range", value = c(5, 25))
+  })
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Fonts not loading:**
+
+```{r}
+# Make sure to call this in your server function
+setup_cpal_google_fonts()
+```
+
+**Dark mode not affecting plots:**
+
+```{r}
+# Ensure thematic is enabled before any renderPlot
+thematic::thematic_on()
+
+# Use theme_cpal_auto() instead of theme_cpal()
+```
+
+**Colors not matching brand:**
+
+```{r}
+# Always use cpaltemplates color functions
+cpal_get_color("deep_teal")  # Correct
+"#006878"                     # Avoid hardcoding
+```
+
+**GT table ID warnings:**
+
+This is expected when using `opt_interactive()`. Suppress with:
+
+```{r}
+options(shiny.devmode = FALSE)
+```
+
+## Additional Resources
+
+- [cpaltemplates Package](https://github.com/childpovertyactionlab/cpaltemplates)
+- [CPAL Shiny Showcase](https://github.com/childpovertyactionlab/shiny-showcase)
+- [bslib Documentation](https://rstudio.github.io/bslib/)
+- [Shiny Documentation](https://shiny.posit.co/)

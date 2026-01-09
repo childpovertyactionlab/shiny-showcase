@@ -1,0 +1,64 @@
+---
+title: "CPAL Shiny Showcase"
+subtitle: "A reference application for building CPAL-branded Shiny dashboards"
+---
+
+## Welcome
+
+The **CPAL Shiny Showcase** is a reference application demonstrating how to build professional, branded Shiny dashboards using the [cpaltemplates](https://github.com/childpovertyactionlab/cpaltemplates) package.
+
+## Quick Start
+
+```{r}
+# 1. Install cpaltemplates
+remotes::install_github("childpovertyactionlab/cpaltemplates")
+
+# 2. Create _brand.yml in your project
+library(cpaltemplates)
+use_cpal_brand()
+
+# 3. Use the dashboard theme
+library(shiny)
+library(bslib)
+
+ui <- page_sidebar(
+  title = "My Dashboard",
+  theme = cpal_dashboard_theme(),
+  # Your content...
+)
+```
+
+Or copy the complete starter template from `templates/app-template.R` in this repository.
+
+## What's Covered
+
+| Topic | Description |
+|-------|-------------|
+| **Brand Configuration** | `_brand.yml` setup and CPAL colors |
+| **Dashboard Theme** | `cpal_dashboard_theme()` integration |
+| **Dark/Light Mode** | Automatic theme switching with thematic |
+| **Loading Spinner** | User feedback during initialization |
+| **Static Charts** | ggplot2 with CPAL themes |
+| **Input Components** | Styled Shiny & shinyWidgets inputs |
+| **Data Tables** | GT, Reactable, and DT with CPAL styling |
+| **Typography** | Consistent text and layout patterns |
+| **Interactive Charts** | Highcharter (TBD) |
+| **Maps** | Mapbox/mapgl (TBD) |
+
+## Live Demo
+
+::: {.callout-tip}
+## View the Live App
+Visit the deployed showcase at [cpal.shinyapps.io/shiny-showcase](https://cpal.shinyapps.io/shiny-showcase)
+:::
+
+## Next Steps
+
+- **[Getting Started](getting-started.qmd)** - Complete setup and component guide
+- **[Templates](templates.qmd)** - Ready-to-use starter files
+
+## Resources
+
+- [cpaltemplates Package](https://github.com/childpovertyactionlab/cpaltemplates)
+- [bslib Documentation](https://rstudio.github.io/bslib/)
+- [Shiny Documentation](https://shiny.posit.co/)

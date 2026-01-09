@@ -1,0 +1,163 @@
+---
+title: "Templates"
+subtitle: "Ready-to-use starter files for CPAL Shiny apps"
+---
+
+## Overview
+
+These templates provide a starting point for building CPAL-branded Shiny applications. Copy them to your project and modify as needed.
+
+## App Template
+
+The main application template includes everything you need to get started:
+
+- CPAL dashboard theme integration
+- Header with logo and dark/light mode toggle
+- Loading spinner for initialization
+- Sidebar with filter controls
+- Sample ggplot2 charts with CPAL theming
+- Reactive data filtering
+
+### Usage
+
+```{r}
+# 1. Copy templates/app-template.R to your project as app.R
+# 2. Run the brand setup function
+cpaltemplates::use_cpal_brand()
+
+# 3. Copy the header and loading spinner templates
+# 4. Run your app!
+```
+
+### Full Template
+
+```{r}
+#| file: ../templates/app-template.R
+#| echo: true
+#| eval: false
+```
+
+::: {.callout-tip}
+## Download Template
+View the complete template at [templates/app-template.R](https://github.com/childpovertyactionlab/shiny-showcase/blob/main/templates/app-template.R)
+:::
+
+## Header Template
+
+A reusable header component with the CPAL logo and dark/light mode toggle.
+
+```{r}
+#| file: ../templates/header-template.R
+#| echo: true
+#| eval: false
+```
+
+### Header Features
+
+- **Logo**: Displays CPAL logo from `www/images/`
+- **Title**: Application name with navigation link
+- **Dark Mode Toggle**: Automatic theme switching via `bslib::input_dark_mode()`
+- **Mode Default**: Set to `mode = "light"` for light mode start
+
+## Loading Spinner Template
+
+Provides visual feedback during app initialization, especially useful when loading Google Fonts or large datasets.
+
+```{r}
+#| file: ../templates/loading-spinner-template.R
+#| echo: true
+#| eval: false
+```
+
+### Loading Spinner Features
+
+- **Overlay UI**: Full-page overlay that blocks interaction during load
+- **Custom Message**: Configurable loading message
+- **Font Loading**: Option to set up CPAL Google Fonts
+- **Deferred Hide**: Uses `session$onFlushed()` to ensure UI is ready
+
+### Usage in Your App
+
+**In UI:**
+```{r}
+#| eval: false
+ui <- page_sidebar(
+  # ... other UI elements
+  useShinyjs(),
+  loading_overlay_ui(message = "Loading application...")
+)
+```
+
+**In Server:**
+```{r}
+#| eval: false
+server <- function(input, output, session) {
+  setup_loading_overlay(session, setup_fonts = TRUE)
+  # ... rest of server logic
+}
+```
+
+## Quick Start Checklist
+
+1. [ ] Copy `templates/app-template.R` to your project as `app.R`
+2. [ ] Run `cpaltemplates::use_cpal_brand()` to create `_brand.yml`
+3. [ ] Copy `templates/header-template.R` to `views/header-ui.R`
+4. [ ] Copy `templates/loading-spinner-template.R` to `R/loading-spinner.R`
+5. [ ] Place CPAL logo in `www/images/CPAL_Logo_OneColor.png`
+6. [ ] Create `.env` file for any API tokens (add to `.gitignore`)
+7. [ ] Run `shiny::runApp()` to test
+
+## File Locations
+
+| Template | Copy To | Purpose |
+|----------|---------|---------|
+| `app-template.R` | `app.R` | Main application |
+| `header-template.R` | `views/header-ui.R` | Header component |
+| `loading-spinner-template.R` | `R/loading-spinner.R` | Loading overlay |
+
+## Customization Tips
+
+### Changing the Logo
+
+Replace the logo path in `header-template.R`:
+
+```{r}
+#| eval: false
+tags$img(
+  src = "images/your-logo.png",  # Change this path
+  height = "40px",
+  alt = "Your Organization"
+)
+```
+
+### Modifying the Theme
+
+The dashboard theme is loaded from `_brand.yml`. To customize colors, edit `_brand.yml` or pass options to `cpal_dashboard_theme()`:
+
+```{r}
+#| eval: false
+theme = cpal_dashboard_theme(
+  # Override specific settings if needed
+)
+```
+
+### Adding Sidebar Sections
+
+Extend the sidebar with additional filter groups:
+
+```{r}
+#| eval: false
+sidebar = sidebar(
+  title = "Filters",
+
+  # Section 1
+  h6("Demographics"),
+  selectInput("age_group", "Age Group:", choices = c("All", "0-5", "6-12")),
+
+  hr(),
+
+  # Section 2
+  h6("Geography"),
+  selectInput("region", "Region:", choices = regions)
+)
+```

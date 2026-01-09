@@ -1,0 +1,135 @@
+/* CPAL Shiny Showcase - Custom Quarto Styles */
+
+/* CPAL Brand Colors */
+:root {
+  --cpal-deep-teal: #004855;
+  --cpal-coral: #E98300;
+  --cpal-sage: #5C8A4D;
+  --cpal-gold: #FFC72C;
+  --cpal-light-teal: #E6F0F2;
+}
+
+/* Navbar customization */
+.navbar {
+  font-weight: 500;
+}
+
+.navbar-brand {
+  font-weight: 600;
+}
+
+.navbar-brand img {
+  margin-right: 15px;
+}
+
+/* Code blocks */
+pre {
+  border-radius: 6px;
+  border-left: 3px solid var(--cpal-deep-teal);
+}
+
+div.sourceCode {
+  border-radius: 6px;
+}
+
+/* Callout customization */
+.callout-tip {
+  border-left-color: var(--cpal-sage) !important;
+}
+
+.callout-note {
+  border-left-color: var(--cpal-deep-teal) !important;
+}
+
+.callout-warning {
+  border-left-color: var(--cpal-coral) !important;
+}
+
+.callout-important {
+  border-left-color: var(--cpal-gold) !important;
+}
+
+/* Tables */
+table {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+table th {
+  background-color: var(--cpal-light-teal);
+  border-bottom: 2px solid var(--cpal-deep-teal);
+}
+
+/* Links */
+a {
+  color: var(--cpal-deep-teal);
+}
+
+a:hover {
+  color: var(--cpal-coral);
+}
+
+/* Headers */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--cpal-deep-teal);
+}
+
+/* TOC styling */
+.sidebar nav[role="doc-toc"] ul > li > a.active {
+  border-left-color: var(--cpal-coral);
+}
+
+/* Footer */
+.nav-footer {
+  border-top: 1px solid var(--cpal-light-teal);
+}
+
+/* Lead text */
+.lead {
+  font-size: 1.15rem;
+  color: #666;
+}
+
+/* Dark mode adjustments */
+[data-bs-theme="dark"] {
+  --cpal-light-teal: #1a3a40;
+}
+
+[data-bs-theme="dark"] h1,
+[data-bs-theme="dark"] h2,
+[data-bs-theme="dark"] h3,
+[data-bs-theme="dark"] h4,
+[data-bs-theme="dark"] h5,
+[data-bs-theme="dark"] h6 {
+  color: #e6f0f2;
+}
+
+[data-bs-theme="dark"] table th {
+  background-color: var(--cpal-light-teal);
+}
+
+[data-bs-theme="dark"] a {
+  color: #7eb8c4;
+}
+
+[data-bs-theme="dark"] a:hover {
+  color: var(--cpal-coral);
+}
+
+/* Checklist styling */
+ul.task-list {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+ul.task-list li {
+  padding: 0.25rem 0;
+}
+
+/* Quick start section highlight */
+.quick-start {
+  background-color: var(--cpal-light-teal);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}

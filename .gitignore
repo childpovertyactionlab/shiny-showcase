@@ -1,0 +1,57 @@
+# RStudio/Posit files
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj.user/
+
+# R package/environment
+.Renviron
+renv/library/
+renv/staging/
+renv/local/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE settings (keep project-level, ignore user-level)
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Backup files
+backups/
+*.bak
+
+# Log files (development only)
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Package build artifacts
+*.tar.gz
+*.Rcheck/
+
+# Shiny app artifacts
+rsconnect/
+shinyapps/
+
+# Claude Code settings (user-specific)
+.claude/
+
+# Environment variables (never commit secrets)
+.env
+.env.local
+*.env
