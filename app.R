@@ -21,6 +21,9 @@ library(sf)
 library(thematic)
 library(cpaltemplates)  # CPAL branding, themes, and templates
 
+# Source debug theme for troubleshooting thematic integration
+source("R/theme_cpal_debug.R")
+
 # Set environment variables (CPAL public demo token - replace with your own for production)
 Sys.setenv(MAPBOX_PUBLIC_TOKEN = "pk.eyJ1IjoiY3BhbGFuYWx5dGljcyIsImEiOiJjbHg5ODAwMGUxaTRtMmpwdGNscms3ZnJmIn0.D6yaemYNkijMo1naveeLbw")
 
@@ -231,7 +234,7 @@ server <- function(input, output, session) {
 
     if(nrow(data) == 0) {
       return(ggplot() +
-              theme_cpal() +
+              theme_cpal_switch(input$dark_mode_toggle) +
               labs(title = "No data matches current filters"))
     }
 
@@ -272,12 +275,24 @@ server <- function(input, output, session) {
     # Apply CPAL theme with title and caption
     p + labs(title = input$chart_title,
            caption = input$chart_notes) +
-    theme_cpal_auto() +
+    theme_cpal_switch(input$dark_mode_toggle) +
     theme(
       plot.title = element_text(hjust = 0.5),
       legend.position = "bottom"
     )
-  })
+  }) %>% bindCache(
+    input$dark_mode_toggle,
+    input$chart_type,
+    input$point_size,
+    input$transparency,
+    input$show_trend,
+    input$chart_title,
+    input$chart_notes,
+    input$poverty_range,
+    input$income_threshold,
+    input$pop_category_select,
+    input$income_category_select
+  )
 
 
   # Value boxes - CLAUDE: Updated for ACS child poverty data
@@ -317,9 +332,11 @@ server <- function(input, output, session) {
     }
 
     # Ensure pop_category is a factor with correct order for consistent colors
+    # Sort by factor level to ensure highcharter renders legend in correct order
     data <- data %>%
       mutate(pop_category = factor(pop_category,
-        levels = c("Large (500k+)", "Medium (100-500k)", "Small (25-100k)", "Rural (<25k)")))
+        levels = c("Large (500k+)", "Medium (100-500k)", "Small (25-100k)", "Rural (<25k)"))) %>%
+      arrange(pop_category)
 
     # Create scatter plot with highcharter
     hchart(
@@ -346,6 +363,7 @@ server <- function(input, output, session) {
       ) %>%
       hc_legend(
         enabled = TRUE,
+        title = list(text = NULL),
         layout = "horizontal",
         align = "center",
         verticalAlign = "bottom"
@@ -571,7 +589,7 @@ server <- function(input, output, session) {
       )
   })
 
-  # Static Charts (ggplot2) - Using theme_cpal_auto() for thematic dark mode support
+  # Static Charts (ggplot2) - Using theme_cpal_switch() for explicit light/dark mode switching
 
   output$ggplot_scatter <- renderPlot({
     data <- filtered_data() %>%
@@ -581,24 +599,29 @@ server <- function(input, output, session) {
 
     ggplot(data, aes(
       x = median_household_income / 1000,
-      y = child_poverty_rate,
-      color = pop_category,
-      fill = pop_category
+      y = child_poverty_rate
     )) +
-      geom_point(size = 3, alpha = 0.8) +
-      geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+      # Single overall regression line with neutral colors
+      geom_smooth(method = "lm", se = TRUE, alpha = 0.2, color = "gray40", fill = "gray70") +
+      # Points colored by population category
+      geom_point(aes(color = pop_category), size = 3, alpha = 0.8) +
       scale_color_cpal_d(drop = FALSE) +
-      scale_fill_cpal_d(drop = FALSE) +
       scale_x_continuous(labels = scales::dollar_format(suffix = "k")) +
       labs(
         title = "Income vs Child Poverty Rate",
         subtitle = paste0("Texas Counties by Population Size (n=", nrow(data), ")"),
         x = "Median Household Income",
         y = "Child Poverty Rate (%)",
-        color = "Population"
+        color = NULL
       ) +
-      theme_cpal_auto()
-  })
+      theme_cpal_switch(input$dark_mode_toggle)
+  }) %>% bindCache(
+    input$dark_mode_toggle,
+    input$poverty_range,
+    input$income_threshold,
+    input$pop_category_select,
+    input$income_category_select
+  )
 
   output$ggplot_line <- renderPlot({
     data <- filtered_data() %>%
@@ -643,10 +666,16 @@ server <- function(input, output, session) {
         subtitle = "Average rate by county population size",
         x = "Median Income Category",
         y = "Average Child Poverty Rate (%)",
-        color = "Population"
+        color = NULL
       ) +
-      theme_cpal_auto()
-  })
+      theme_cpal_switch(input$dark_mode_toggle)
+  }) %>% bindCache(
+    input$dark_mode_toggle,
+    input$poverty_range,
+    input$income_threshold,
+    input$pop_category_select,
+    input$income_category_select
+  )
 
   output$ggplot_bar <- renderPlot({
     data <- filtered_data() %>%
@@ -663,18 +692,25 @@ server <- function(input, output, session) {
       geom_col(alpha = 0.9) +
       geom_text(aes(label = count), vjust = -0.5, fontface = "bold", size = 5) +
       scale_fill_cpal_d(drop = FALSE) +
+      scale_y_continuous(limits = c(0, 100), expand = c(0, 0)) +
       labs(
         title = "Texas Counties by Child Poverty Level",
         subtitle = paste0("Distribution across poverty categories (n=", sum(data$count), " counties)"),
         x = "Poverty Category",
         y = "Number of Counties"
       ) +
-      theme_cpal_auto() +
+      theme_cpal_switch(input$dark_mode_toggle) +
       theme(
         axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "none"
       )
-  })
+  }) %>% bindCache(
+    input$dark_mode_toggle,
+    input$poverty_range,
+    input$income_threshold,
+    input$pop_category_select,
+    input$income_category_select
+  )
 
   output$ggplot_heatmap <- renderPlot({
     # Create correlation matrix for ACS variables
@@ -711,16 +747,22 @@ server <- function(input, output, session) {
         subtitle = "Texas County Demographics",
         x = "",
         y = "",
-        fill = "Correlation"
+        fill = NULL
       ) +
-      theme_cpal_auto() +
+      theme_cpal_switch(input$dark_mode_toggle) +
       theme(
         axis.text.x = element_text(angle = 45, hjust = 1),
         legend.key.height = unit(1.5, "cm"),
         legend.key.width = unit(0.8, "cm"),
         legend.position = "right"
       )
-  })
+  }) %>% bindCache(
+    input$dark_mode_toggle,
+    input$poverty_range,
+    input$income_threshold,
+    input$pop_category_select,
+    input$income_category_select
+  )
 
   # Tables with CPAL theming - CLAUDE: Updated for ACS child poverty data
   output$gt_table <- render_gt({

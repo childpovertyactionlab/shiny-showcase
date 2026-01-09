@@ -36,7 +36,7 @@ Or copy the complete starter template from `templates/app-template.R` in this re
 |-------|-------------|
 | **Brand Configuration** | `_brand.yml` setup and CPAL colors |
 | **Dashboard Theme** | `cpal_dashboard_theme()` integration |
-| **Dark/Light Mode** | Automatic theme switching with thematic |
+| **Dark/Light Mode** | Theme switching with `theme_cpal_switch()` + `bindCache()` |
 | **Loading Spinner** | User feedback during initialization |
 | **Static Charts** | ggplot2 with CPAL themes |
 | **Input Components** | Styled Shiny & shinyWidgets inputs |

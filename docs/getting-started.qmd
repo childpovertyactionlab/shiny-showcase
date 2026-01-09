@@ -342,31 +342,54 @@ Make sure to place your logo file at `www/images/CPAL_Logo_OneColor.png` or upda
 
 ## Dark/Light Mode Support
 
-### Enabling Thematic for ggplot2
-
-The `thematic` package automatically adjusts ggplot2 colors based on the app's theme (dark/light mode).
+### Recommended Approach: theme_cpal_switch()
+The recommended approach for dark/light mode support is to use `theme_cpal_switch()`, which explicitly switches between `theme_cpal()` and `theme_cpal_dark()` based on the toggle state.
 
 ```{r}
-server <- function(input, output, session) {
-  # IMPORTANT: Call this at the start of your server function
-  thematic::thematic_on()
+# Define the theme switcher function (add to your app or source from a helper file)
+theme_cpal_switch <- function(mode = "light", ...) {
+  if (is.null(mode) || mode == "light") {
+    cpaltemplates::theme_cpal(...)
+  } else {
+    cpaltemplates::theme_cpal_dark(...)
+  }
+}
 
-  # Your plots will now auto-adjust to dark/light mode
+server <- function(input, output, session) {
+  # Your plots explicitly switch based on the dark mode toggle
+
   output$my_plot <- renderPlot({
     ggplot(data, aes(x, y)) +
       geom_point() +
-      theme_cpal_auto()  # Use this theme for auto dark/light support
+      theme_cpal_switch(input$dark_mode_toggle)
   })
 }
 ```
+
+### Performance: Using bindCache()
+
+For faster theme switching, wrap your renderPlot with `bindCache()`:
+
+```{r}
+output$my_plot <- renderPlot({
+  ggplot(data, aes(x, y)) +
+    geom_point() +
+    theme_cpal_switch(input$dark_mode_toggle)
+}) %>% bindCache(
+  input$dark_mode_toggle,
+  input$other_filter_inputs  # Include all inputs that affect the plot
+)
+```
+
+After the first render of each mode, subsequent toggles are instant (served from cache).
 
 ### Theme Functions
 
 | Function | Use Case |
 |----------|----------|
-| `theme_cpal()` | Standard CPAL theme (light mode only) |
-| `theme_cpal_auto()` | Auto-adjusts to dark/light mode (recommended) |
-| `theme_cpal_dark()` | Explicit dark mode theme |
+| `theme_cpal()` | Standard CPAL theme (light mode) |
+| `theme_cpal_dark()` | Dark mode theme |
+| `theme_cpal_switch(mode)` | Switches between light/dark based on mode (recommended for Shiny) |
 | `theme_cpal_minimal()` | Minimal styling variant |
 | `theme_cpal_print()` | Optimized for print output |
 
@@ -382,8 +405,11 @@ output$my_chart <- renderPlot({
       x = "Category",
       y = "Value"
     ) +
-    theme_cpal_auto()  # Auto dark/light mode support
-})
+    theme_cpal_switch(input$dark_mode_toggle)
+}) %>% bindCache(
+  input$dark_mode_toggle,
+  # Add other reactive inputs that affect filtered_data()
+)
 ```
 
 ## Loading Spinner
@@ -522,7 +548,7 @@ output$scatter_plot <- renderPlot({
       y = "Poverty Rate (%)",
       color = "Category"
     ) +
-    theme_cpal_auto()
+    theme_cpal_switch(input$dark_mode_toggle)
 })
 ```
 
@@ -539,7 +565,7 @@ output$bar_chart <- renderPlot({
       x = "Category",
       y = "Count"
     ) +
-    theme_cpal_auto() +
+    theme_cpal_switch(input$dark_mode_toggle) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1),
       legend.position = "none"
@@ -562,7 +588,7 @@ output$heatmap <- renderPlot({
       limits = c(-1, 1)
     ) +
     labs(title = "Correlation Matrix") +
-    theme_cpal_auto() +
+    theme_cpal_switch(input$dark_mode_toggle) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 })
 ```
@@ -930,7 +956,7 @@ server <- function(input, output, session) {
       geom_col() +
       scale_fill_cpal_d() +
       labs(title = "Count by Category", x = NULL, y = "Count") +
-      theme_cpal_auto() +
+      theme_cpal_switch(input$dark_mode_toggle) +
       theme(legend.position = "none")
   })
 
@@ -940,7 +966,7 @@ server <- function(input, output, session) {
       geom_boxplot(alpha = 0.8) +
       scale_fill_cpal_d() +
       labs(title = "Value by Group", x = NULL, y = "Value") +
-      theme_cpal_auto() +
+      theme_cpal_switch(input$dark_mode_toggle) +
       theme(legend.position = "none")
   })
 
@@ -968,10 +994,18 @@ setup_cpal_google_fonts()
 **Dark mode not affecting plots:**
 
 ```{r}
-# Ensure thematic is enabled before any renderPlot
-thematic::thematic_on()
+# Use theme_cpal_switch() with the dark mode toggle input
+output$my_plot <- renderPlot({
+  ggplot(data, aes(x, y)) +
+    geom_point() +
+    theme_cpal_switch(input$dark_mode_toggle)  # Pass the toggle state
+})
 
-# Use theme_cpal_auto() instead of theme_cpal()
+# For better performance, add bindCache()
+output$my_plot <- renderPlot({
+  ...
+  theme_cpal_switch(input$dark_mode_toggle)
+}) %>% bindCache(input$dark_mode_toggle, ...)
 ```
 
 **Colors not matching brand:**
